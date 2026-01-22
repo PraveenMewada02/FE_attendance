@@ -4,21 +4,34 @@ import type { PunchDataFile, ApiResponse } from '../types';
 // Prioritize deployed backend URL for production
 // Only use localhost fallback in development mode
 const getApiBaseUrl = (): string => {
+  // Debug: Log all available environment variables
+  console.log('🔍 Environment check:', {
+    VITE_API_DEPLOY_URL: import.meta.env.VITE_API_DEPLOY_URL,
+    VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+    MODE: import.meta.env.MODE,
+    DEV: import.meta.env.DEV,
+    PROD: import.meta.env.PROD,
+  });
+
   // First priority: Deployed backend URL (for production/deployment)
+  // Use this if set, regardless of dev/prod mode
   if (import.meta.env.VITE_API_DEPLOY_URL) {
-    console.log('✅ Using deployed backend URL:', import.meta.env.VITE_API_DEPLOY_URL);
-    return import.meta.env.VITE_API_DEPLOY_URL;
+    const url = import.meta.env.VITE_API_DEPLOY_URL;
+    console.log('✅ Using deployed backend URL:', url);
+    return url;
   }
   
   // Second priority: Base URL (for local development with custom backend)
   if (import.meta.env.VITE_API_BASE_URL) {
-    console.log('✅ Using base URL:', import.meta.env.VITE_API_BASE_URL);
-    return import.meta.env.VITE_API_BASE_URL;
+    const url = import.meta.env.VITE_API_BASE_URL;
+    console.log('✅ Using base URL:', url);
+    return url;
   }
   
   // Only use localhost in development mode
   if (import.meta.env.DEV) {
-    console.warn('⚠️ Using localhost fallback. Set VITE_API_BASE_URL or VITE_API_DEPLOY_URL for production.');
+    console.warn('⚠️ Using localhost fallback. To use deployed backend, create .env.local with:');
+    console.warn('   VITE_API_DEPLOY_URL=https://your-deployed-backend-url.com');
     return 'http://localhost:8000';
   }
   

@@ -20,15 +20,23 @@ VITE_API_DEPLOY_URL=https://your-backend-api-url.com
 
 ### For Local Development
 
-Create a `.env.local` file in the root directory:
+**IMPORTANT:** For local development, you MUST create a `.env.local` file in the root directory.
+
+1. Create a file named `.env.local` in the root of your project
+2. Add your environment variables:
 
 ```env
-# For local development
-VITE_API_BASE_URL=http://localhost:8000
+# Use deployed backend URL (recommended for testing)
+VITE_API_DEPLOY_URL=https://your-deployed-backend-url.com
 
-# Or use the deploy URL if testing against deployed backend
-# VITE_API_DEPLOY_URL=https://your-backend-api-url.com
+# OR use local backend (only if running backend locally)
+# VITE_API_BASE_URL=http://localhost:8000
 ```
+
+**After creating `.env.local`:**
+- Restart your development server (`npm run dev`)
+- The environment variables will be loaded automatically
+- Check the browser console for the "✅ Using deployed backend URL" message
 
 ## Priority Order
 
