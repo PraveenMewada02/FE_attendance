@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { PunchDataFile, ApiResponse } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Use VITE_API_DEPLOY_URL for production/deployment, fallback to VITE_API_BASE_URL for local dev, or localhost
+const API_BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
