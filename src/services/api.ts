@@ -1,8 +1,36 @@
 import axios from 'axios';
 import type { PunchDataFile, ApiResponse } from '../types';
 
-// Use VITE_API_DEPLOY_URL for production/deployment, fallback to VITE_API_BASE_URL for local dev, or localhost
-const API_BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Prioritize deployed backend URL for production
+// Only use localhost fallback in development mode
+const getApiBaseUrl = (): string => {
+  // First priority: Deployed backend URL (for production/deployment)
+  if (import.meta.env.VITE_API_DEPLOY_URL) {
+    console.log('✅ Using deployed backend URL:', import.meta.env.VITE_API_DEPLOY_URL);
+    return import.meta.env.VITE_API_DEPLOY_URL;
+  }
+  
+  // Second priority: Base URL (for local development with custom backend)
+  if (import.meta.env.VITE_API_BASE_URL) {
+    console.log('✅ Using base URL:', import.meta.env.VITE_API_BASE_URL);
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Only use localhost in development mode
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ Using localhost fallback. Set VITE_API_BASE_URL or VITE_API_DEPLOY_URL for production.');
+    return 'http://localhost:8000';
+  }
+  
+  // In production, if no URL is set, show warning
+  console.error(
+    '❌ VITE_API_DEPLOY_URL is not set! API calls will fail. Please configure it in your Vercel environment variables.'
+  );
+  // Return empty string so API calls fail with clear network errors
+  return '';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
