@@ -2,13 +2,93 @@ import axios from 'axios';
 import type { PunchDataFile, ApiResponse } from '../types';
 
 // Get API base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || '';
+const getApiBaseUrl = (): string => {
+  const url = import.meta.env.VITE_API_DEPLOY_URL;
+  
+  // Debug: Log what we're getting from the environment
+  console.log('🔍 Environment variable check:', {
+    VITE_API_DEPLOY_URL: url,
+    type: typeof url,
+    isUndefined: url === undefined,
+    isNull: url === null,
+    isEmpty: url === '',
+    trimmed: url?.trim(),
+    allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')),
+  });
+  
+  // Check if the variable exists but is undefined (common Vite issue)
+  if (url === undefined) {
+    console.error('❌ VITE_API_DEPLOY_URL is undefined!');
+    console.error('');
+    console.error('This usually means:');
+    console.error('1. The .env file is not in the root directory (same level as package.json)');
+    console.error('2. The dev server was not restarted after creating/editing the .env file');
+    console.error('3. The variable name is misspelled (must be exactly: VITE_API_DEPLOY_URL)');
+    console.error('');
+    console.error('To fix:');
+    console.error('1. Create/check .env file in root directory with:');
+    console.error('   VITE_API_DEPLOY_URL=http://localhost:8000');
+    console.error('2. Make sure there are NO spaces around the = sign');
+    console.error('3. Make sure there are NO quotes around the value');
+    console.error('4. STOP the dev server (Ctrl+C)');
+    console.error('5. START it again: npm run dev');
+    return '';
+  }
+  
+  if (!url || url.trim() === '') {
+    console.error(
+      '❌ VITE_API_DEPLOY_URL is empty! API calls will fail.'
+    );
+    console.error('   Check your .env file - the value appears to be empty or whitespace only.');
+    console.error('   Make sure it looks like: VITE_API_DEPLOY_URL=http://localhost:8000');
+    console.error('   Then restart your development server completely.');
+    return '';
+  }
 
-if (!API_BASE_URL) {
-  console.error(
-    '❌ VITE_API_DEPLOY_URL is not set! API calls will fail. Please configure it in your environment variables.'
-  );
-}
+  // Check for placeholder values
+  const placeholderPatterns = [
+    /YOUR_DEPLOYED_URL_HERE/i,
+    /your-backend-api-url/i,
+    /your-deployed-backend-url/i,
+    /example\.com/i,
+    /placeholder/i,
+  ];
+
+  for (const pattern of placeholderPatterns) {
+    if (pattern.test(url)) {
+      console.error(
+        `❌ VITE_API_DEPLOY_URL appears to be a placeholder: "${url}"`
+      );
+      console.error('   Please replace it with your actual backend API URL in .env.local');
+      console.error('   Then restart your development server.');
+      return '';
+    }
+  }
+
+  // Validate that it's a proper URL
+  try {
+    const urlObj = new URL(url);
+    // Ensure it's http or https
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      console.error(
+        `❌ VITE_API_DEPLOY_URL must use http or https protocol: "${url}"`
+      );
+      return '';
+    }
+  } catch (e) {
+    console.error(
+      `❌ VITE_API_DEPLOY_URL is not a valid URL: "${url}"`
+    );
+    console.error('   It should be a full URL like: https://api.example.com');
+    console.error('   Update it in .env.local and restart your development server.');
+    return '';
+  }
+
+  // Remove trailing slash if present
+  return url.replace(/\/$/, '');
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -24,9 +104,18 @@ const api = axios.create({
   },
 });
 
-// Add request interceptor to log what's being sent
+// Add request interceptor to log what's being sent and validate baseURL
 api.interceptors.request.use(
   (config) => {
+    // Check if baseURL is set
+    if (!config.baseURL || config.baseURL.trim() === '') {
+      const error = new Error(
+        'VITE_API_DEPLOY_URL is not configured. Please set it in your .env.local file and restart the server.'
+      ) as any;
+      error.config = config;
+      return Promise.reject(error);
+    }
+
     // Log request details, especially for date parameters
     if (config.params) {
       console.log('API Request:', {
