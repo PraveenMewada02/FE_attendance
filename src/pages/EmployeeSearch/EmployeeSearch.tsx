@@ -16,6 +16,7 @@ export default function EmployeeSearch() {
   const [toDate, setToDate] = useState(format(new Date(), 'dd/MM/yyyy'));
   const [empcode, setEmpcode] = useState('');
   const [employeeEmail, setEmployeeEmail] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
@@ -172,6 +173,7 @@ export default function EmployeeSearch() {
         employeeName: employeeName,
         fromDate: fromDate,
         toDate: toDate,
+        customMessage: customMessage.trim() || undefined,
         attendanceData: data,
       });
 
@@ -179,9 +181,10 @@ export default function EmployeeSearch() {
         setEmailError(response.error || 'Failed to send email');
       } else {
         setEmailSuccess(`Email sent successfully to ${employeeEmail}`);
-        // Clear email field after successful send
+        // Clear email and message fields after successful send
         setTimeout(() => {
           setEmployeeEmail('');
+          setCustomMessage('');
           setEmailSuccess(null);
         }, 3000);
       }
@@ -405,6 +408,20 @@ export default function EmployeeSearch() {
                 <Send size={16} />
                 {sendingEmail ? 'Sending...' : 'Send Email'}
               </button>
+            </div>
+            <div className="form-group custom-message-group">
+              <label>
+                Custom Message (Optional)
+              </label>
+              <textarea
+                placeholder="Enter a custom message that will appear in the email after the period line. You can use multiple lines."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                disabled={sendingEmail}
+                rows={4}
+                className="custom-message-textarea"
+              />
+              <p className="form-hint">This message will appear in the email after the date period information.</p>
             </div>
             {emailError && (
               <div className="email-error">

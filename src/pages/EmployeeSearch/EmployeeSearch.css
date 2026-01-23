@@ -127,6 +127,39 @@
   min-width: 250px;
 }
 
+.custom-message-group {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.custom-message-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.custom-message-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.custom-message-textarea:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .email-btn {
   padding: 10px 24px;
   background: #059669;

@@ -257,6 +257,7 @@ export interface EmailAttendanceRequest {
   employeeName: string;
   fromDate: string;
   toDate: string;
+  customMessage?: string;
   attendanceData: any[];
 }
 
