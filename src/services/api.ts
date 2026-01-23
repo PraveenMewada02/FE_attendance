@@ -253,7 +253,7 @@ export const mcidApi = {
 // Email endpoints
 export interface EmailAttendanceRequest {
   empcode: string;
-  email: string;
+  email: string; // Can be empty for "send to all" - backend should resolve from empcode
   employeeName: string;
   fromDate: string;
   toDate: string;

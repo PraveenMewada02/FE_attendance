@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Search, Mail, Send } from 'lucide-react';
+import { Calendar, Search, Mail, Send, X, Users } from 'lucide-react';
 import { allDataApi, emailApi } from '../../services/api';
 import DataTable from '../../components/DataTable/DataTable';
 import type { AllData } from '../../types';
@@ -16,10 +16,50 @@ export default function EmployeeSearch() {
   const [toDate, setToDate] = useState(format(new Date(), 'dd/MM/yyyy'));
   const [empcode, setEmpcode] = useState('');
   const [employeeEmail, setEmployeeEmail] = useState('');
+  const [emailList, setEmailList] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState('');
+  const [sendMode, setSendMode] = useState<'single' | 'multiple' | 'all'>('single');
   const [customMessage, setCustomMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [sendingProgress, setSendingProgress] = useState<{ sent: number; total: number } | null>(null);
+  const [emailResults, setEmailResults] = useState<{
+    totalSent: number;
+    totalFailed: number;
+    successful: Array<{ empcode: string; email: string; name: string }>;
+    failed: Array<{ empcode: string; email: string; name: string; error: string }>;
+  } | null>(null);
+
+  const extractDataFromResponse = (response: any): any[] => {
+    let dataArray: any[] = [];
+    
+    // Check for InOutPunchData (the actual API response structure)
+    if (response.InOutPunchData) {
+      dataArray = Array.isArray(response.InOutPunchData) ? response.InOutPunchData : [response.InOutPunchData];
+    }
+    // If response is directly an array
+    else if (Array.isArray(response)) {
+      dataArray = response;
+    }
+    // If response has a data property
+    else if (response.data) {
+      dataArray = Array.isArray(response.data) ? response.data : [response.data];
+    }
+    // If response is an object with nested data
+    else if (response.PunchData) {
+      dataArray = Array.isArray(response.PunchData) ? response.PunchData : [response.PunchData];
+    }
+    // If response is a single object, wrap it in array
+    else if (typeof response === 'object' && response !== null) {
+      // Check if it looks like a data record
+      if (response.Empcode || response.empcode) {
+        dataArray = [response];
+      }
+    }
+    
+    return dataArray;
+  };
 
   const handleSearch = async () => {
     if (!fromDate || !toDate) {
@@ -53,6 +93,7 @@ export default function EmployeeSearch() {
     setError(null);
     setEmailError(null);
     setEmailSuccess(null);
+    setEmailResults(null);
 
     try {
       const finalFromDate = normalizedFromDate || fromDate;
@@ -137,62 +178,307 @@ export default function EmployeeSearch() {
     }
   };
 
+  const addEmailToList = () => {
+    const email = emailInput.trim();
+    if (!email) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    if (emailList.includes(email)) {
+      setEmailError('This email is already in the list');
+      return;
+    }
+
+    setEmailList([...emailList, email]);
+    setEmailInput('');
+    setEmailError(null);
+  };
+
+  const removeEmailFromList = (emailToRemove: string) => {
+    setEmailList(emailList.filter(email => email !== emailToRemove));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && sendMode === 'multiple') {
+      e.preventDefault();
+      addEmailToList();
+    }
+  };
+
+  const getUniqueEmployees = () => {
+    const employeeMap = new Map<string, { empcode: string; name: string }>();
+    data.forEach(item => {
+      if (item.empcode && !employeeMap.has(item.empcode)) {
+        employeeMap.set(item.empcode, {
+          empcode: item.empcode,
+          name: item.name,
+        });
+      }
+    });
+    return Array.from(employeeMap.values());
+  };
+
   const handleSendEmail = async () => {
-    if (!empcode.trim()) {
-      setEmailError('Please search for an employee first');
-      return;
-    }
-
-    if (!employeeEmail.trim()) {
-      setEmailError('Please enter employee email address');
-      return;
-    }
-
     if (data.length === 0) {
       setEmailError('No attendance data to send. Please search first.');
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(employeeEmail.trim())) {
-      setEmailError('Please enter a valid email address');
-      return;
+    let emailsToSend: string[] = [];
+
+    if (sendMode === 'single') {
+      if (!employeeEmail.trim()) {
+        setEmailError('Please enter employee email address');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(employeeEmail.trim())) {
+        setEmailError('Please enter a valid email address');
+        return;
+      }
+      emailsToSend = [employeeEmail.trim()];
+    } else if (sendMode === 'multiple') {
+      if (emailList.length === 0) {
+        setEmailError('Please add at least one email address');
+        return;
+      }
+      emailsToSend = emailList;
+    } else if (sendMode === 'all') {
+      // For "send to all", we need to fetch all employees for the date range
+      // Since we're searching for a specific employee, we need to fetch all data first
+      try {
+        setSendingEmail(true);
+        setEmailError(null);
+        setEmailSuccess(null);
+        
+        // Fetch all employees for the date range (without empcode filter)
+        const allResponse: any = await allDataApi.search(fromDate, toDate);
+        const allDataArray = extractDataFromResponse(allResponse);
+        
+        if (allDataArray.length === 0) {
+          setEmailError('No employees found for the selected date range.');
+          setSendingEmail(false);
+          return;
+        }
+        
+        // Get unique employees
+        const employeeMap = new Map<string, { empcode: string; name: string }>();
+        allDataArray.forEach((item: any) => {
+          const empcode = item.Empcode || item.empcode;
+          if (empcode && !employeeMap.has(empcode)) {
+            employeeMap.set(empcode, {
+              empcode: empcode,
+              name: (item.Name || item.name || '').trim(),
+            });
+          }
+        });
+        
+        const uniqueEmployees = Array.from(employeeMap.values());
+        
+        if (uniqueEmployees.length === 0) {
+          setEmailError('No unique employees found.');
+          setSendingEmail(false);
+          return;
+        }
+        
+        // For each employee, fetch their attendance data and send email
+        // Note: The backend should handle getting email addresses from employee codes
+        setSendingProgress({ sent: 0, total: uniqueEmployees.length });
+        
+        const successful: Array<{ empcode: string; email: string; name: string }> = [];
+        const failed: Array<{ empcode: string; email: string; name: string; error: string }> = [];
+        
+        for (let i = 0; i < uniqueEmployees.length; i++) {
+          const employee = uniqueEmployees[i];
+          try {
+            // Fetch attendance data for this employee
+            const empResponse: any = await allDataApi.filter(employee.empcode, fromDate, toDate);
+            const empDataArray = extractDataFromResponse(empResponse);
+            
+            // Transform to AllData format
+            const transformedData: AllData[] = empDataArray.map((item: any) => ({
+              empcode: item.Empcode || item.empcode || '',
+              name: (item.Name || item.name || '').trim(),
+              in_time: item.INTime || item.in_time || item.InTime || '--:--',
+              out_time: item.OUTTime || item.out_time || item.OutTime || '--:--',
+              work_time: item.WorkTime || item.work_time || '00:00',
+              over_time: item.OverTime || item.over_time || '00:00',
+              break_time: item.BreakTime || item.break_time || '00:00',
+              status: item.Status || item.status || '',
+              date_string: item.DateString || item.date_string || item.Date || '',
+              remark: item.Remark || item.remark || '--',
+              erl_out: item.Erl_Out || item.ErlOut || item.erl_out || '00:00',
+              late_in: item.Late_In || item.LateIn || item.late_in || '00:00',
+            }));
+            
+            // Send email - use employee code as email placeholder, backend should resolve it
+            const response = await emailApi.sendAttendanceReport({
+              empcode: employee.empcode,
+              email: '', // Backend should get email from empcode
+              employeeName: employee.name,
+              fromDate: fromDate,
+              toDate: toDate,
+              customMessage: customMessage.trim() || undefined,
+              attendanceData: transformedData,
+            });
+            
+            if (response.error) {
+              failed.push({
+                empcode: employee.empcode,
+                email: '', // Email resolved by backend
+                name: employee.name,
+                error: response.error,
+              });
+            } else {
+              successful.push({
+                empcode: employee.empcode,
+                email: '', // Email resolved by backend
+                name: employee.name,
+              });
+            }
+          } catch (err: any) {
+            failed.push({
+              empcode: employee.empcode,
+              email: '',
+              name: employee.name,
+              error: err.message || 'Failed to send',
+            });
+          }
+          
+          setSendingProgress({ sent: i + 1, total: uniqueEmployees.length });
+        }
+        
+        // Store results
+        const results = {
+          totalSent: successful.length,
+          totalFailed: failed.length,
+          successful,
+          failed,
+        };
+        setEmailResults(results);
+        
+        // Show results
+        if (successful.length > 0 && failed.length === 0) {
+          setEmailSuccess(
+            `Successfully sent ${successful.length} email${successful.length > 1 ? 's' : ''} to all ${uniqueEmployees.length} employee${uniqueEmployees.length > 1 ? 's' : ''}`
+          );
+          setTimeout(() => {
+            setCustomMessage('');
+            setEmailSuccess(null);
+            setEmailResults(null);
+          }, 10000);
+        } else if (successful.length > 0 && failed.length > 0) {
+          setEmailError(
+            `Sent ${successful.length} email${successful.length > 1 ? 's' : ''} successfully, but ${failed.length} failed. See details below.`
+          );
+        } else {
+          setEmailError(`Failed to send all emails. See details below.`);
+        }
+        
+        setSendingEmail(false);
+        setSendingProgress(null);
+        return;
+      } catch (err: any) {
+        console.error('Error sending to all employees:', err);
+        setEmailError(err.message || 'An error occurred while sending emails to all employees');
+        setSendingEmail(false);
+        setSendingProgress(null);
+        return;
+      }
     }
 
     setSendingEmail(true);
     setEmailError(null);
     setEmailSuccess(null);
+    setEmailResults(null);
+    setSendingProgress({ sent: 0, total: emailsToSend.length });
 
     try {
       const employeeName = data.length > 0 ? data[0].name : 'Employee';
-      
-      const response = await emailApi.sendAttendanceReport({
-        empcode: empcode.trim(),
-        email: employeeEmail.trim(),
-        employeeName: employeeName,
-        fromDate: fromDate,
-        toDate: toDate,
-        customMessage: customMessage.trim() || undefined,
-        attendanceData: data,
-      });
+      const employeeEmpcode = empcode.trim();
+      const successful: Array<{ empcode: string; email: string; name: string }> = [];
+      const failed: Array<{ empcode: string; email: string; name: string; error: string }> = [];
 
-      if (response.error) {
-        setEmailError(response.error || 'Failed to send email');
-      } else {
-        setEmailSuccess(`Email sent successfully to ${employeeEmail}`);
-        // Clear email and message fields after successful send
+      // Send emails to all recipients
+      for (let i = 0; i < emailsToSend.length; i++) {
+        const email = emailsToSend[i];
+        try {
+          const response = await emailApi.sendAttendanceReport({
+            empcode: employeeEmpcode,
+            email: email,
+            employeeName: employeeName,
+            fromDate: fromDate,
+            toDate: toDate,
+            customMessage: customMessage.trim() || undefined,
+            attendanceData: data,
+          });
+
+          if (response.error) {
+            failed.push({
+              empcode: employeeEmpcode,
+              email: email,
+              name: employeeName,
+              error: response.error,
+            });
+          } else {
+            successful.push({
+              empcode: employeeEmpcode,
+              email: email,
+              name: employeeName,
+            });
+          }
+        } catch (err: any) {
+          failed.push({
+            empcode: employeeEmpcode,
+            email: email,
+            name: employeeName,
+            error: err.message || 'Failed to send',
+          });
+        }
+
+        setSendingProgress({ sent: i + 1, total: emailsToSend.length });
+      }
+
+      // Store results
+      const results = {
+        totalSent: successful.length,
+        totalFailed: failed.length,
+        successful,
+        failed,
+      };
+      setEmailResults(results);
+
+      // Show results
+      if (successful.length > 0 && failed.length === 0) {
+        setEmailSuccess(
+          `Successfully sent ${successful.length} email${successful.length > 1 ? 's' : ''} to ${emailsToSend.length} recipient${emailsToSend.length > 1 ? 's' : ''}`
+        );
+        // Clear fields after successful send
         setTimeout(() => {
           setEmployeeEmail('');
+          setEmailList([]);
+          setEmailInput('');
           setCustomMessage('');
           setEmailSuccess(null);
-        }, 3000);
+          setEmailResults(null);
+        }, 10000);
+      } else if (successful.length > 0 && failed.length > 0) {
+        setEmailError(
+          `Sent ${successful.length} email${successful.length > 1 ? 's' : ''} successfully, but ${failed.length} failed. See details below.`
+        );
+      } else {
+        setEmailError(`Failed to send all emails. See details below.`);
       }
     } catch (err: any) {
       console.error('Error sending email:', err);
       setEmailError(err.message || 'An error occurred while sending email');
     } finally {
       setSendingEmail(false);
+      setSendingProgress(null);
     }
   };
 
@@ -386,29 +672,156 @@ export default function EmployeeSearch() {
       {data.length > 0 && (
         <div className="results-section">
           <div className="email-section">
-            <div className="email-form">
-              <div className="form-group">
-                <label>
-                  <Mail size={16} />
-                  Employee Email *
-                </label>
-                <input
-                  type="email"
-                  placeholder="employee@example.com"
-                  value={employeeEmail}
-                  onChange={(e) => setEmployeeEmail(e.target.value)}
+            <div className="email-mode-selector">
+              <label className="mode-label">Send Mode:</label>
+              <div className="mode-buttons">
+                <button
+                  className={`mode-btn ${sendMode === 'single' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSendMode('single');
+                    setEmailError(null);
+                  }}
                   disabled={sendingEmail}
-                />
+                >
+                  <Mail size={16} />
+                  Single Email
+                </button>
+                <button
+                  className={`mode-btn ${sendMode === 'multiple' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSendMode('multiple');
+                    setEmailError(null);
+                  }}
+                  disabled={sendingEmail}
+                >
+                  <Mail size={16} />
+                  Multiple Emails
+                </button>
+                <button
+                  className={`mode-btn ${sendMode === 'all' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSendMode('all');
+                    setEmailError(null);
+                  }}
+                  disabled={sendingEmail}
+                >
+                  <Users size={16} />
+                  All Employees
+                </button>
               </div>
-              <button 
-                className="email-btn" 
-                onClick={handleSendEmail} 
-                disabled={sendingEmail || !employeeEmail.trim()}
-              >
-                <Send size={16} />
-                {sendingEmail ? 'Sending...' : 'Send Email'}
-              </button>
             </div>
+
+            {sendMode === 'single' && (
+              <div className="email-form">
+                <div className="form-group">
+                  <label>
+                    <Mail size={16} />
+                    Employee Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="employee@example.com"
+                    value={employeeEmail}
+                    onChange={(e) => setEmployeeEmail(e.target.value)}
+                    disabled={sendingEmail}
+                  />
+                </div>
+                <button 
+                  className="email-btn" 
+                  onClick={handleSendEmail} 
+                  disabled={sendingEmail || !employeeEmail.trim()}
+                >
+                  <Send size={16} />
+                  {sendingEmail ? 'Sending...' : 'Send Email'}
+                </button>
+              </div>
+            )}
+
+            {sendMode === 'multiple' && (
+              <div className="email-form-multiple">
+                <div className="form-group">
+                  <label>
+                    <Mail size={16} />
+                    Add Email Addresses *
+                  </label>
+                  <div className="email-input-group">
+                    <input
+                      type="email"
+                      placeholder="Enter email and press Enter or click Add"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      disabled={sendingEmail}
+                    />
+                    <button
+                      className="add-email-btn"
+                      onClick={addEmailToList}
+                      disabled={sendingEmail || !emailInput.trim()}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {emailList.length > 0 && (
+                    <div className="email-list">
+                      {emailList.map((email, index) => (
+                        <div key={index} className="email-tag">
+                          <span>{email}</span>
+                          <button
+                            className="remove-email-btn"
+                            onClick={() => removeEmailFromList(email)}
+                            disabled={sendingEmail}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  className="email-btn" 
+                  onClick={handleSendEmail} 
+                  disabled={sendingEmail || emailList.length === 0}
+                >
+                  <Send size={16} />
+                  {sendingEmail ? `Sending... (${sendingProgress?.sent || 0}/${sendingProgress?.total || 0})` : `Send to ${emailList.length} Email${emailList.length !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            )}
+
+            {sendMode === 'all' && (
+              <div className="email-form-all">
+                <div className="all-employees-info">
+                  <p>This will send attendance reports to all employees found in the search results.</p>
+                  <p className="info-note">Note: Email addresses need to be available in the system for each employee.</p>
+                  <div className="employee-count">
+                    <strong>Total unique employees: {getUniqueEmployees().length}</strong>
+                  </div>
+                </div>
+                <button 
+                  className="email-btn" 
+                  onClick={handleSendEmail} 
+                  disabled={sendingEmail || data.length === 0}
+                >
+                  <Users size={16} />
+                  {sendingEmail ? `Sending... (${sendingProgress?.sent || 0}/${sendingProgress?.total || 0})` : `Send to All Employees`}
+                </button>
+              </div>
+            )}
+
+            {sendingProgress && (
+              <div className="sending-progress">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${(sendingProgress.sent / sendingProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="progress-text">
+                  Sending {sendingProgress.sent} of {sendingProgress.total} emails...
+                </p>
+              </div>
+            )}
             <div className="form-group custom-message-group">
               <label>
                 Custom Message (Optional)
@@ -431,6 +844,65 @@ export default function EmployeeSearch() {
             {emailSuccess && (
               <div className="email-success">
                 {emailSuccess}
+              </div>
+            )}
+            
+            {emailResults && (
+              <div className="email-results">
+                <div className="results-header">
+                  <h3>Email Sending Results</h3>
+                  <div className="results-summary-stats">
+                    <div className="stat-item success">
+                      <span className="stat-label">Sent:</span>
+                      <span className="stat-value">{emailResults.totalSent}</span>
+                    </div>
+                    <div className="stat-item failed">
+                      <span className="stat-label">Failed:</span>
+                      <span className="stat-value">{emailResults.totalFailed}</span>
+                    </div>
+                    <div className="stat-item total">
+                      <span className="stat-label">Total:</span>
+                      <span className="stat-value">{emailResults.totalSent + emailResults.totalFailed}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {emailResults.successful.length > 0 && (
+                  <div className="results-section success-section">
+                    <h4 className="section-title success-title">
+                      ✓ Successfully Sent ({emailResults.successful.length})
+                    </h4>
+                    <div className="empcode-list">
+                      {emailResults.successful.map((item, index) => (
+                        <div key={index} className="empcode-item success-item">
+                          <span className="empcode-badge">{item.empcode}</span>
+                          <span className="empcode-name">{item.name}</span>
+                          {item.email && <span className="empcode-email">{item.email}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {emailResults.failed.length > 0 && (
+                  <div className="results-section failed-section">
+                    <h4 className="section-title failed-title">
+                      ✗ Failed to Send ({emailResults.failed.length})
+                    </h4>
+                    <div className="empcode-list">
+                      {emailResults.failed.map((item, index) => (
+                        <div key={index} className="empcode-item failed-item">
+                          <span className="empcode-badge">{item.empcode}</span>
+                          <span className="empcode-name">{item.name}</span>
+                          {item.email && <span className="empcode-email">{item.email}</span>}
+                          <span className="empcode-error" title={item.error}>
+                            {item.error}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

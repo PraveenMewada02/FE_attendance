@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Search } from 'lucide-react';
 import { allDataApi } from '../../services/api';
 import DataTable from '../../components/DataTable/DataTable';
@@ -8,13 +8,54 @@ import { normalizeDate } from '../../utils/dateUtils';
 import { exportToPDF } from '../../utils/pdfExport';
 import './Attendance.css';
 
+const STORAGE_KEY = 'attendance_page_data';
+
+interface StoredData {
+  data: AllData[];
+  fromDate: string;
+  toDate: string;
+  empcode: string;
+  error: string | null;
+}
+
 export default function Attendance() {
-  const [data, setData] = useState<AllData[]>([]);
+  // Load data from sessionStorage on mount
+  const loadStoredData = (): StoredData | null => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Error loading stored data:', error);
+    }
+    return null;
+  };
+
+  const storedData = loadStoredData();
+
+  const [data, setData] = useState<AllData[]>(storedData?.data || []);
   const [loading, setLoading] = useState(false);
-  const [fromDate, setFromDate] = useState(format(new Date(), 'dd/MM/yyyy'));
-  const [toDate, setToDate] = useState(format(new Date(), 'dd/MM/yyyy'));
-  const [empcode, setEmpcode] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState(storedData?.fromDate || format(new Date(), 'dd/MM/yyyy'));
+  const [toDate, setToDate] = useState(storedData?.toDate || format(new Date(), 'dd/MM/yyyy'));
+  const [empcode, setEmpcode] = useState(storedData?.empcode || '');
+  const [error, setError] = useState<string | null>(storedData?.error || null);
+
+  // Save data to sessionStorage whenever it changes
+  useEffect(() => {
+    const dataToStore: StoredData = {
+      data,
+      fromDate,
+      toDate,
+      empcode,
+      error,
+    };
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
+    } catch (error) {
+      console.error('Error saving data to storage:', error);
+    }
+  }, [data, fromDate, toDate, empcode, error]);
 
   const handleSearch = async () => {
     if (!fromDate || !toDate) {
@@ -110,6 +151,8 @@ export default function Attendance() {
 
         console.log('Transformed data:', transformedData);
         setData(transformedData);
+        // Clear error on successful fetch
+        setError(null);
       }
     } catch (err: any) {
       console.error('Error fetching data:', err);
