@@ -5,6 +5,7 @@ import DataTable from '../../components/DataTable/DataTable';
 import type { AllData } from '../../types';
 import { format } from 'date-fns';
 import { normalizeDate } from '../../utils/dateUtils';
+import { exportToPDF } from '../../utils/pdfExport';
 import './EmployeeSearch.css';
 
 export default function EmployeeSearch() {
@@ -198,32 +199,27 @@ export default function EmployeeSearch() {
       return;
     }
 
-    const csv = [
-      ['Emp Code', 'Employee Name', 'Date', 'In Time', 'Out Time', 'Work Time', 'Break Time', 'Over Time', 'Late In', 'Early Out', 'Status', 'Remark'].join(','),
-      ...data.map(row => [
-        row.empcode,
-        row.name,
-        row.date_string,
-        row.in_time,
-        row.out_time,
-        row.work_time,
-        row.break_time,
-        row.over_time,
-        row.late_in,
-        row.erl_out,
-        row.status,
-        row.remark,
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance_${empcode}_${fromDate.replace(/\//g, '_')}_${toDate.replace(/\//g, '_')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const employeeName = data.length > 0 ? data[0].name : 'Employee';
+    exportToPDF({
+      title: `Employee Attendance Report - ${employeeName}`,
+      filename: `attendance_${empcode}_${fromDate.replace(/\//g, '_')}_${toDate.replace(/\//g, '_')}.pdf`,
+      dateRange: `Employee: ${empcode} | Date Range: ${fromDate} to ${toDate}`,
+      columns: [
+        { header: 'Emp Code', dataKey: 'empcode' },
+        { header: 'Employee Name', dataKey: 'name' },
+        { header: 'Date', dataKey: 'date_string' },
+        { header: 'In Time', dataKey: 'in_time' },
+        { header: 'Out Time', dataKey: 'out_time' },
+        { header: 'Work Time', dataKey: 'work_time' },
+        { header: 'Break Time', dataKey: 'break_time' },
+        { header: 'Over Time', dataKey: 'over_time' },
+        { header: 'Late In', dataKey: 'late_in' },
+        { header: 'Early Out', dataKey: 'erl_out' },
+        { header: 'Status', dataKey: 'status' },
+        { header: 'Remark', dataKey: 'remark' },
+      ],
+      data: data,
+    });
   };
 
   const columns = [

@@ -4,6 +4,7 @@ import { mcidDataApi } from '../../services/api';
 import DataTable from '../../components/DataTable/DataTable';
 import type { MCIDData } from '../../types';
 import { format } from 'date-fns';
+import { exportToPDF } from '../../utils/pdfExport';
 import './MCID.css';
 
 export default function MCID() {
@@ -126,19 +127,20 @@ export default function MCID() {
       return;
     }
 
-    const headers = Object.keys(data[0]);
-    const csv = [
-      headers.join(','),
-      ...data.map(row => headers.map(h => `"${(row as any)[h] || ''}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mcid_data_${fromDate}_${toDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToPDF({
+      title: 'MCID Data Report',
+      filename: `mcid_data_${fromDate.replace(/\//g, '_')}_${toDate.replace(/\//g, '_')}.pdf`,
+      dateRange: `Date Range: ${fromDate} to ${toDate}`,
+      columns: [
+        { header: 'Name', dataKey: 'name' },
+        { header: 'Emp Code', dataKey: 'empcode' },
+        { header: 'Punch Date', dataKey: 'punch_date' },
+        { header: 'Punch Time', dataKey: 'punch_time' },
+        { header: 'M Flag', dataKey: 'm_flag' },
+        { header: 'MCID', dataKey: 'mcid' },
+      ],
+      data: data,
+    });
   };
 
   const columns = [
