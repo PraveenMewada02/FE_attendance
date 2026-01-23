@@ -2,6 +2,10 @@
 
 ## Required Environment Variables
 
+### VITE_API_DEPLOY_URL
+
+This is the **only** environment variable required for the application. It specifies the backend API URL.
+
 ### For Production/Deployment (Vercel)
 
 Set the following environment variable in your Vercel project settings:
@@ -23,27 +27,17 @@ VITE_API_DEPLOY_URL=https://your-backend-api-url.com
 **IMPORTANT:** For local development, you MUST create a `.env.local` file in the root directory.
 
 1. Create a file named `.env.local` in the root of your project
-2. Add your environment variables:
+2. Add your environment variable:
 
 ```env
-# Use deployed backend URL (recommended for testing)
 VITE_API_DEPLOY_URL=https://your-deployed-backend-url.com
-
-# OR use local backend (only if running backend locally)
-# VITE_API_BASE_URL=http://localhost:8000
 ```
 
 **After creating `.env.local`:**
 - Restart your development server (`npm run dev`)
 - The environment variables will be loaded automatically
-- Check the browser console for the "✅ Using deployed backend URL" message
 
-## Priority Order
-
-The API configuration uses the following priority:
-1. `VITE_API_DEPLOY_URL` (for production/deployment)
-2. `VITE_API_BASE_URL` (for local development)
-3. `http://localhost:8000` (default fallback)
+**Note:** If `VITE_API_DEPLOY_URL` is not set, the application will show an error in the console and API calls will fail.
 
 ## Notes
 

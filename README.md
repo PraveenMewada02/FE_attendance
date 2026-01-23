@@ -34,10 +34,11 @@ A modern, responsive frontend application built with React, TypeScript, and Vite
 npm install
 ```
 
-2. Create a `.env` file (optional):
+2. Create a `.env.local` file (required):
 ```env
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_DEPLOY_URL=https://your-backend-api-url.com
 ```
+**Note:** This environment variable is required for the application to work.
 
 3. Start the development server:
 ```bash
@@ -77,7 +78,7 @@ src/
 
 ## API Integration
 
-The frontend connects to the Django backend API. Make sure your Django server is running on `http://localhost:8000` (or configure the base URL in `.env`).
+The frontend connects to the Django backend API. Configure the API URL using the `VITE_API_DEPLOY_URL` environment variable in `.env.local`.
 
 ### Available Endpoints
 

@@ -7,12 +7,12 @@
    npm install
    ```
 
-2. **Configure Backend URL (Optional)**
-   Create a `.env` file in the root directory:
+2. **Configure Backend URL (Required)**
+   Create a `.env.local` file in the root directory:
    ```env
-   VITE_API_BASE_URL=http://localhost:8000
+   VITE_API_DEPLOY_URL=https://your-backend-api-url.com
    ```
-   If not set, defaults to `http://localhost:8000`
+   **Note:** This variable is required. If not set, API calls will fail.
 
 3. **Start Development Server**
    ```bash
@@ -97,9 +97,9 @@ If you see CORS errors in the browser console, make sure:
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | Django backend API URL | `http://localhost:8000` |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_API_DEPLOY_URL` | Django backend API URL | Yes |
 
 ## Features Overview
 
