@@ -5,6 +5,7 @@ import Attendance from './pages/Attendance/Attendance';
 import MCID from './pages/MCID/MCID';
 import Files from './pages/Files/Files';
 import Analytics from './pages/Analytics/Analytics';
+import EmployeeSearch from './pages/EmployeeSearch/EmployeeSearch';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/attendance" element={<Attendance />} />
+          <Route path="/employee-search" element={<EmployeeSearch />} />
           <Route path="/mcid" element={<MCID />} />
           <Route path="/files" element={<Files />} />
           <Route path="/analytics" element={<Analytics />} />

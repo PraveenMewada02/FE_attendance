@@ -196,5 +196,23 @@ export const mcidApi = {
   },
 };
 
+// Email endpoints
+export interface EmailAttendanceRequest {
+  empcode: string;
+  email: string;
+  employeeName: string;
+  fromDate: string;
+  toDate: string;
+  attendanceData: any[];
+}
+
+export const emailApi = {
+  // Send attendance report via email
+  sendAttendanceReport: async (data: EmailAttendanceRequest): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/email/send-attendance/`, data);
+    return response.data;
+  },
+};
+
 export default api;
 
