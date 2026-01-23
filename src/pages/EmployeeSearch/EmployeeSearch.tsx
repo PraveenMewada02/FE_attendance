@@ -62,7 +62,8 @@ export default function EmployeeSearch() {
         toDate: finalToDate 
       });
       
-      const response = await allDataApi.filter(empcode.trim(), finalFromDate, finalToDate);
+      let response: any;
+      response = await allDataApi.filter(empcode.trim(), finalFromDate, finalToDate);
 
       console.log('API Response:', response);
 
@@ -73,19 +74,32 @@ export default function EmployeeSearch() {
         // Handle different response formats
         let dataArray: any[] = [];
         
+        // Check for InOutPunchData (the actual API response structure)
         if (response.InOutPunchData) {
           dataArray = Array.isArray(response.InOutPunchData) ? response.InOutPunchData : [response.InOutPunchData];
-        } else if (Array.isArray(response)) {
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
           dataArray = response;
-        } else if (response.data) {
+        }
+        // If response has a data property
+        else if (response.data) {
           dataArray = Array.isArray(response.data) ? response.data : [response.data];
-        } else if (response.PunchData) {
+        }
+        // If response is an object with nested data
+        else if (response.PunchData) {
           dataArray = Array.isArray(response.PunchData) ? response.PunchData : [response.PunchData];
-        } else if (typeof response === 'object' && response !== null) {
+        }
+        // If response is a single object, wrap it in array
+        else if (typeof response === 'object' && response !== null) {
+          // Check if it looks like a data record
           if (response.Empcode || response.empcode) {
             dataArray = [response];
           }
         }
+        
+        console.log('Extracted data array:', dataArray);
+        console.log('Data array length:', dataArray.length);
         
         // Transform API response to AllData format
         const transformedData: AllData[] = dataArray.map((item: any) => ({
@@ -103,6 +117,7 @@ export default function EmployeeSearch() {
           late_in: item.Late_In || item.LateIn || item.late_in || '00:00',
         }));
 
+        console.log('Transformed data:', transformedData);
         setData(transformedData);
         
         // Extract employee email if available from the first record
@@ -447,4 +462,3 @@ export default function EmployeeSearch() {
     </div>
   );
 }
-
