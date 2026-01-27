@@ -216,7 +216,6 @@ export default function Dashboard() {
   };
 
   const handleManualRefresh = () => {
-    isInternalNavigation.current = false; // Allow refresh
     loadDashboardData(true);
   };
 
