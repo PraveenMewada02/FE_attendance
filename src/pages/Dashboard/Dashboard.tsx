@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Users, AlertCircle, CheckCircle, XCircle, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Users, AlertCircle, CheckCircle, XCircle, X, RefreshCw } from 'lucide-react';
 import { allDataApi } from '../../services/api';
 import { format, subDays } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -19,10 +20,68 @@ export default function Dashboard() {
   const [detailData, setDetailData] = useState<AllData[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [todayData, setTodayData] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
+  
+  // Track if it's the first load of the entire app
+  const isFirstLoad = useRef(true);
+  // Track previous location to detect navigation
+  const prevLocation = useRef<string>('');
+  // Track if tab was hidden (for visibility API)
+  const wasTabHidden = useRef(false);
+  // Track last visibility change time to prevent rapid refreshes
+  const lastVisibilityChange = useRef<number>(0);
 
+  // Load data on first mount (when site is opened for the first time)
   useEffect(() => {
-    loadDashboardData();
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      prevLocation.current = location.pathname;
+      loadDashboardData();
+    }
   }, []);
+
+  // Track location changes (internal navigation)
+  useEffect(() => {
+    // If location changed and we're on dashboard, it's internal navigation
+    if (prevLocation.current !== location.pathname && location.pathname === '/') {
+      // User navigated back to dashboard - don't auto-refresh
+      prevLocation.current = location.pathname;
+      // Don't refresh, just update the location
+      return;
+    }
+    prevLocation.current = location.pathname;
+  }, [location]);
+
+  // Handle page visibility changes (tab becomes active when site is open)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Tab became hidden
+        wasTabHidden.current = true;
+      } else if (document.visibilityState === 'visible') {
+        // Tab became visible
+        // Only refresh if:
+        // 1. Tab was previously hidden (not just internal navigation)
+        // 2. We're on the dashboard
+        // 3. At least 5 seconds have passed since last visibility change
+        if (wasTabHidden.current && location.pathname === '/') {
+          const now = Date.now();
+          if (now - lastVisibilityChange.current > 5000) {
+            lastVisibilityChange.current = now;
+            loadDashboardData();
+          }
+        }
+        wasTabHidden.current = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const extractDataFromResponse = (response: any): any[] => {
     let data: any[] = [];
@@ -54,9 +113,13 @@ export default function Dashboard() {
     return data;
   };
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (isManualRefresh = false) => {
     try {
-      setLoading(true);
+      if (isManualRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const today = format(new Date(), 'dd/MM/yyyy');
       const weekAgo = format(subDays(new Date(), 6), 'dd/MM/yyyy'); // Last 7 days (including today)
 
@@ -148,7 +211,13 @@ export default function Dashboard() {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = () => {
+    isInternalNavigation.current = false; // Allow refresh
+    loadDashboardData(true);
   };
 
   const handleCardClick = async (cardType: string) => {
@@ -271,6 +340,24 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      <div className="dashboard-header">
+        <div className="dashboard-title">
+          <h2>Dashboard</h2>
+          <p className="last-updated">
+            Last updated: {new Date().toLocaleTimeString()}
+          </p>
+        </div>
+        <button 
+          className="refresh-btn"
+          onClick={handleManualRefresh}
+          disabled={isRefreshing || loading}
+          title="Refresh Dashboard"
+        >
+          <RefreshCw size={18} className={isRefreshing ? 'spinning' : ''} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
       <div className="stats-grid">
         {statCards.map((card) => {
           const Icon = card.icon;
