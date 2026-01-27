@@ -269,5 +269,16 @@ export const emailApi = {
   },
 };
 
+// Monitor endpoints
+export const monitorApi = {
+  // Trigger email alerts for invalid punches / missing out punches
+  punch: async (fromDate: string, toDate: string, empcode?: string): Promise<ApiResponse<any>> => {
+    const params: any = { from_date: fromDate, to_date: toDate };
+    if (empcode) params.empcode = empcode;
+    const response = await api.get(`/monitor/punch/`, { params });
+    return response.data;
+  },
+};
+
 export default api;
 

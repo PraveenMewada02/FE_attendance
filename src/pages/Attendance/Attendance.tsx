@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Search } from 'lucide-react';
-import { allDataApi } from '../../services/api';
+import { Calendar, Search, Send } from 'lucide-react';
+import { allDataApi, monitorApi } from '../../services/api';
 import DataTable from '../../components/DataTable/DataTable';
 import type { AllData } from '../../types';
 import { format } from 'date-fns';
@@ -40,6 +40,8 @@ export default function Attendance() {
   const [toDate, setToDate] = useState(storedData?.toDate || format(new Date(), 'dd/MM/yyyy'));
   const [empcode, setEmpcode] = useState(storedData?.empcode || '');
   const [error, setError] = useState<string | null>(storedData?.error || null);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorMessage, setMonitorMessage] = useState<string | null>(null);
 
   // Save data to sessionStorage whenever it changes
   useEffect(() => {
@@ -191,6 +193,50 @@ export default function Attendance() {
     });
   };
 
+  const handleSendPunchAlerts = async () => {
+    if (!fromDate || !toDate) {
+      setError('Please select both from and to dates');
+      return;
+    }
+
+    const normalizedFromDate = normalizeDate(fromDate);
+    const normalizedToDate = normalizeDate(toDate);
+
+    if (!normalizedFromDate || !normalizedToDate) {
+      setError('Invalid date format. Please use DD/MM/YYYY format (e.g., 22/01/2026)');
+      return;
+    }
+
+    const finalFromDate = normalizedFromDate || fromDate;
+    const finalToDate = normalizedToDate || toDate;
+
+    setMonitorLoading(true);
+    setMonitorMessage(null);
+
+    try {
+      const response: any = await monitorApi.punch(
+        finalFromDate,
+        finalToDate,
+        empcode.trim() || undefined
+      );
+
+      if (response.error || response.Error) {
+        setMonitorMessage(response.error || response.Msg || 'Failed to send punch alerts');
+      } else {
+        setMonitorMessage(
+          response.message ||
+            response.Msg ||
+            'Punch alert emails triggered successfully for invalid punches and missing out punches.'
+        );
+      }
+    } catch (err: any) {
+      console.error('Error sending punch alerts:', err);
+      setMonitorMessage(err.message || 'An error occurred while sending punch alerts');
+    } finally {
+      setMonitorLoading(false);
+    }
+  };
+
   const columns = [
     { 
       key: 'empcode', 
@@ -340,8 +386,23 @@ export default function Attendance() {
           <button className="search-btn" onClick={handleSearch} disabled={loading}>
             {loading ? 'Searching...' : 'Search'}
           </button>
+          <button
+            type="button"
+            className="search-btn punch-alert-btn"
+            onClick={handleSendPunchAlerts}
+            disabled={monitorLoading || loading}
+          >
+            <Send size={16} />
+            {monitorLoading ? 'Sending alerts...' : 'Send Punch Alerts'}
+          </button>
         </div>
       </div>
+
+      {monitorMessage && (
+        <div className="monitor-message">
+          {monitorMessage}
+        </div>
+      )}
 
       {error && (
         <div className="error-message">
@@ -391,4 +452,5 @@ export default function Attendance() {
     </div>
   );
 }
+
 
