@@ -1,0 +1,279 @@
+/* Monthly Attendance Report Styles */
+.monthly-attendance-report {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.report-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.report-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.report-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #374151;
+  min-width: 200px;
+}
+
+.info-value {
+  color: #6b7280;
+}
+
+.summary-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.summary-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.daily-breakdown-section {
+  margin-top: 24px;
+}
+
+.breakdown-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.attendance-table thead {
+  background: #f3f4f6;
+}
+
+.attendance-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.attendance-table td {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.attendance-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.attendance-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.missing-time {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-p {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-a {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-wo {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-hl {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-lv {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Daily Punch Report Styles */
+.daily-punch-report {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.punch-table-section {
+  margin-top: 24px;
+  overflow-x: auto;
+}
+
+.punch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 1200px;
+}
+
+.punch-table thead {
+  background: #f3f4f6;
+}
+
+.punch-table th {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.punch-table td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.punch-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.punch-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.empty-punch {
+  color: #d1d5db;
+}
+
+/* View Toggle Styles */
+.view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-toggle-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.view-toggle-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.view-toggle-btn.active:hover {
+  background: #2563eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .attendance-table,
+  .punch-table {
+    font-size: 11px;
+  }
+
+  .attendance-table th,
+  .attendance-table td,
+  .punch-table th,
+  .punch-table td {
+    padding: 6px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+

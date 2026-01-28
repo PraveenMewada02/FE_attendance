@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Calendar, Search, Send } from 'lucide-react';
 import { allDataApi, monitorApi } from '../../services/api';
 import DataTable from '../../components/DataTable/DataTable';
+import MonthlyAttendanceReport from '../../components/AttendanceReports/MonthlyAttendanceReport';
+import DailyPunchReport from '../../components/AttendanceReports/DailyPunchReport';
 import type { AllData } from '../../types';
 import { format } from 'date-fns';
 import { normalizeDate } from '../../utils/dateUtils';
@@ -42,6 +44,7 @@ export default function Attendance() {
   const [error, setError] = useState<string | null>(storedData?.error || null);
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorMessage, setMonitorMessage] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'monthly' | 'daily'>('table');
 
   // Save data to sessionStorage whenever it changes
   useEffect(() => {
@@ -432,14 +435,94 @@ export default function Attendance() {
               </div>
             </div>
           </div>
-          <DataTable
-            data={data}
-            columns={columns}
-            loading={loading}
-            onExport={handleExport}
-            searchable={true}
-            searchKeys={['empcode', 'name', 'date_string']}
-          />
+
+          {/* View Toggle */}
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+            >
+              Table View
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'monthly' ? 'active' : ''}`}
+              onClick={() => setViewMode('monthly')}
+            >
+              Monthly Report
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'daily' ? 'active' : ''}`}
+              onClick={() => setViewMode('daily')}
+            >
+              Daily Punches
+            </button>
+          </div>
+
+          {/* Render based on view mode */}
+          {viewMode === 'table' && (
+            <DataTable
+              data={data}
+              columns={columns}
+              loading={loading}
+              onExport={handleExport}
+              searchable={true}
+              searchKeys={['empcode', 'name', 'date_string']}
+            />
+          )}
+
+          {viewMode === 'monthly' && (
+            <div className="report-views">
+              {(() => {
+                // Group data by employee
+                const employeeMap = new Map<string, AllData[]>();
+                data.forEach((item) => {
+                  const key = item.empcode;
+                  if (!employeeMap.has(key)) {
+                    employeeMap.set(key, []);
+                  }
+                  employeeMap.get(key)!.push(item);
+                });
+
+                return Array.from(employeeMap.entries()).map(([empcode, employeeData]) => {
+                  const firstRecord = employeeData[0];
+                  return (
+                    <MonthlyAttendanceReport
+                      key={empcode}
+                      data={employeeData}
+                      employeeName={firstRecord.name}
+                      empcode={empcode}
+                      fromDate={fromDate}
+                      toDate={toDate}
+                    />
+                  );
+                });
+              })()}
+            </div>
+          )}
+
+          {viewMode === 'daily' && (
+            <div className="report-views">
+              {(() => {
+                // Group data by date
+                const dateMap = new Map<string, AllData[]>();
+                data.forEach((item) => {
+                  const dateKey = item.date_string || '';
+                  if (!dateMap.has(dateKey)) {
+                    dateMap.set(dateKey, []);
+                  }
+                  dateMap.get(dateKey)!.push(item);
+                });
+
+                return Array.from(dateMap.entries()).map(([date, dateData]) => (
+                  <DailyPunchReport
+                    key={date}
+                    data={dateData}
+                    reportDate={date}
+                  />
+                ));
+              })()}
+            </div>
+          )}
         </div>
       )}
 
