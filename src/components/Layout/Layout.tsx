@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Clock, FileText, BarChart3, UserSearch } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, FileText, BarChart3, UserSearch, Database } from 'lucide-react';
 import './Layout.css';
 
 interface LayoutProps {
@@ -12,6 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/attendance', label: 'Attendance Data', icon: Clock },
+    { path: '/stored-attendance', label: 'Stored Attendance', icon: Database },
     { path: '/employee-search', label: 'Employee Search', icon: UserSearch },
     { path: '/mcid', label: 'MCID Data', icon: Users },
     { path: '/files', label: 'Files', icon: FileText },

@@ -158,7 +158,7 @@ api.interceptors.response.use(
 
 // All Data endpoints
 export const allDataApi = {
-  // Fetch from external API and save to database
+  // Legacy: Fetch from external API and save to database (older endpoint)
   fetchAndSave: async (fromDate: string, toDate: string): Promise<ApiResponse<any>> => {
     const response = await api.get(`/inout/list/`, {
       params: { from_date: fromDate, to_date: toDate },
@@ -166,8 +166,32 @@ export const allDataApi = {
     return response.data;
   },
 
+  // NEW: Fetch from external API and store in all_data table
+  fetchAndStore: async (fromDate: string, toDate: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/inout/fetch-and-store/`, {
+      params: { from_date: fromDate, to_date: toDate },
+    });
+    return response.data;
+  },
+
+  // NEW: Retrieve stored data from all_data table
+  retrieveStored: async (
+    fromDate: string,
+    toDate: string,
+    empcode?: string
+  ): Promise<ApiResponse<any>> => {
+    const params: any = { from_date: fromDate, to_date: toDate };
+    if (empcode) params.empcode = empcode;
+    const response = await api.get(`/inout/retrieve/`, { params });
+    return response.data;
+  },
+
   // Search attendance data (doesn't save to DB)
-  search: async (fromDate: string, toDate: string, empcode?: string): Promise<ApiResponse<any>> => {
+  search: async (
+    fromDate: string,
+    toDate: string,
+    empcode?: string
+  ): Promise<ApiResponse<any>> => {
     const params: any = { from_date: fromDate, to_date: toDate };
     if (empcode) params.empcode = empcode;
     const response = await api.get(`/inout/search/`, { params });
@@ -175,7 +199,11 @@ export const allDataApi = {
   },
 
   // Filter by employee
-  filter: async (empcode: string, fromDate: string, toDate: string): Promise<ApiResponse<any>> => {
+  filter: async (
+    empcode: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<ApiResponse<any>> => {
     const response = await api.get(`/inout/filter/`, {
       params: { empcode, from_date: fromDate, to_date: toDate },
     });
