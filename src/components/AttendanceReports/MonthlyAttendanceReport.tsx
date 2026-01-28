@@ -1,4 +1,3 @@
-import React from 'react';
 import type { AllData } from '../../types';
 import './AttendanceReports.css';
 
